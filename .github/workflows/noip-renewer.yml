@@ -2,8 +2,12 @@ name: noip-renewer
 
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
+    - cron: '0 0 * * *' # Chạy vào lúc 00:00 UTC (07:00 giờ Việt Nam) mỗi ngày
+  workflow_dispatch:    # Cho phép chạy thủ công
+
+# Cấp quyền cho GITHUB_TOKEN để có thể ghi vào repo
+permissions:
+  contents: write
 
 jobs:
   noip-renewer:
@@ -11,394 +15,196 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4 # Sử dụng phiên bản mới nhất
 
-    - name: Set up Docker
-      uses: docker/setup-buildx-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3 # Sử dụng phiên bản mới nhất
 
     - name: Docker Pull
       run: docker pull simaofsilva/noip-renewer:latest
 
     - name: Process NO-IP accounts
+      id: noip_process
+      # Khai báo tất cả các secrets cần thiết dưới dạng biến môi trường
+      # Điều này giúp script bên dưới có thể truy cập chúng một cách linh hoạt
+      # Bạn cần liệt kê đủ số lượng tài khoản bạn muốn xử lý (ví dụ: tối đa 30)
+      # Nếu một tài khoản không có secret nào được thiết lập, nó sẽ được bỏ qua.
+      env:
+        NO_IP_USERNAME_1: ${{ secrets.NO_IP_USERNAME_1 }}
+        NO_IP_PASSWORD_1: ${{ secrets.NO_IP_PASSWORD_1 }}
+        NO_IP_TOTP_KEY_1: ${{ secrets.NO_IP_TOTP_KEY_1 }}
+        NO_IP_USERNAME_2: ${{ secrets.NO_IP_USERNAME_2 }}
+        NO_IP_PASSWORD_2: ${{ secrets.NO_IP_PASSWORD_2 }}
+        NO_IP_TOTP_KEY_2: ${{ secrets.NO_IP_TOTP_KEY_2 }}
+        NO_IP_USERNAME_3: ${{ secrets.NO_IP_USERNAME_3 }}
+        NO_IP_PASSWORD_3: ${{ secrets.NO_IP_PASSWORD_3 }}
+        NO_IP_TOTP_KEY_3: ${{ secrets.NO_IP_TOTP_KEY_3 }}
+        NO_IP_USERNAME_4: ${{ secrets.NO_IP_USERNAME_4 }}
+        NO_IP_PASSWORD_4: ${{ secrets.NO_IP_PASSWORD_4 }}
+        NO_IP_TOTP_KEY_4: ${{ secrets.NO_IP_TOTP_KEY_4 }}
+        NO_IP_USERNAME_5: ${{ secrets.NO_IP_USERNAME_5 }}
+        NO_IP_PASSWORD_5: ${{ secrets.NO_IP_PASSWORD_5 }}
+        NO_IP_TOTP_KEY_5: ${{ secrets.NO_IP_TOTP_KEY_5 }}
+        NO_IP_USERNAME_6: ${{ secrets.NO_IP_USERNAME_6 }}
+        NO_IP_PASSWORD_6: ${{ secrets.NO_IP_PASSWORD_6 }}
+        NO_IP_TOTP_KEY_6: ${{ secrets.NO_IP_TOTP_KEY_6 }}
+        NO_IP_USERNAME_7: ${{ secrets.NO_IP_USERNAME_7 }}
+        NO_IP_PASSWORD_7: ${{ secrets.NO_IP_PASSWORD_7 }}
+        NO_IP_TOTP_KEY_7: ${{ secrets.NO_IP_TOTP_KEY_7 }}
+        NO_IP_USERNAME_8: ${{ secrets.NO_IP_USERNAME_8 }}
+        NO_IP_PASSWORD_8: ${{ secrets.NO_IP_PASSWORD_8 }}
+        NO_IP_TOTP_KEY_8: ${{ secrets.NO_IP_TOTP_KEY_8 }}
+        NO_IP_USERNAME_9: ${{ secrets.NO_IP_USERNAME_9 }}
+        NO_IP_PASSWORD_9: ${{ secrets.NO_IP_PASSWORD_9 }}
+        NO_IP_TOTP_KEY_9: ${{ secrets.NO_IP_TOTP_KEY_9 }}
+        NO_IP_USERNAME_10: ${{ secrets.NO_IP_USERNAME_10 }}
+        NO_IP_PASSWORD_10: ${{ secrets.NO_IP_PASSWORD_10 }}
+        NO_IP_TOTP_KEY_10: ${{ secrets.NO_IP_TOTP_KEY_10 }}
+        NO_IP_USERNAME_11: ${{ secrets.NO_IP_USERNAME_11 }}
+        NO_IP_PASSWORD_11: ${{ secrets.NO_IP_PASSWORD_11 }}
+        NO_IP_TOTP_KEY_11: ${{ secrets.NO_IP_TOTP_KEY_11 }}
+        NO_IP_USERNAME_12: ${{ secrets.NO_IP_USERNAME_12 }}
+        NO_IP_PASSWORD_12: ${{ secrets.NO_IP_PASSWORD_12 }}
+        NO_IP_TOTP_KEY_12: ${{ secrets.NO_IP_TOTP_KEY_12 }}
+        NO_IP_USERNAME_13: ${{ secrets.NO_IP_USERNAME_13 }}
+        NO_IP_PASSWORD_13: ${{ secrets.NO_IP_PASSWORD_13 }}
+        NO_IP_TOTP_KEY_13: ${{ secrets.NO_IP_TOTP_KEY_13 }}
+        NO_IP_USERNAME_14: ${{ secrets.NO_IP_USERNAME_14 }}
+        NO_IP_PASSWORD_14: ${{ secrets.NO_IP_PASSWORD_14 }}
+        NO_IP_TOTP_KEY_14: ${{ secrets.NO_IP_TOTP_KEY_14 }}
+        NO_IP_USERNAME_15: ${{ secrets.NO_IP_USERNAME_15 }}
+        NO_IP_PASSWORD_15: ${{ secrets.NO_IP_PASSWORD_15 }}
+        NO_IP_TOTP_KEY_15: ${{ secrets.NO_IP_TOTP_KEY_15 }}
+        NO_IP_USERNAME_16: ${{ secrets.NO_IP_USERNAME_16 }}
+        NO_IP_PASSWORD_16: ${{ secrets.NO_IP_PASSWORD_16 }}
+        NO_IP_TOTP_KEY_16: ${{ secrets.NO_IP_TOTP_KEY_16 }}
+        NO_IP_USERNAME_17: ${{ secrets.NO_IP_USERNAME_17 }}
+        NO_IP_PASSWORD_17: ${{ secrets.NO_IP_PASSWORD_17 }}
+        NO_IP_TOTP_KEY_17: ${{ secrets.NO_IP_TOTP_KEY_17 }}
+        NO_IP_USERNAME_18: ${{ secrets.NO_IP_USERNAME_18 }}
+        NO_IP_PASSWORD_18: ${{ secrets.NO_IP_PASSWORD_18 }}
+        NO_IP_TOTP_KEY_18: ${{ secrets.NO_IP_TOTP_KEY_18 }}
+        NO_IP_USERNAME_19: ${{ secrets.NO_IP_USERNAME_19 }}
+        NO_IP_PASSWORD_19: ${{ secrets.NO_IP_PASSWORD_19 }}
+        NO_IP_TOTP_KEY_19: ${{ secrets.NO_IP_TOTP_KEY_19 }}
+        NO_IP_USERNAME_20: ${{ secrets.NO_IP_USERNAME_20 }}
+        NO_IP_PASSWORD_20: ${{ secrets.NO_IP_PASSWORD_20 }}
+        NO_IP_TOTP_KEY_20: ${{ secrets.NO_IP_TOTP_KEY_20 }}
+        NO_IP_USERNAME_21: ${{ secrets.NO_IP_USERNAME_21 }}
+        NO_IP_PASSWORD_21: ${{ secrets.NO_IP_PASSWORD_21 }}
+        NO_IP_TOTP_KEY_21: ${{ secrets.NO_IP_TOTP_KEY_21 }}
+        NO_IP_USERNAME_22: ${{ secrets.NO_IP_USERNAME_22 }}
+        NO_IP_PASSWORD_22: ${{ secrets.NO_IP_PASSWORD_22 }}
+        NO_IP_TOTP_KEY_22: ${{ secrets.NO_IP_TOTP_KEY_22 }}
+        NO_IP_USERNAME_23: ${{ secrets.NO_IP_USERNAME_23 }}
+        NO_IP_PASSWORD_23: ${{ secrets.NO_IP_PASSWORD_23 }}
+        NO_IP_TOTP_KEY_23: ${{ secrets.NO_IP_TOTP_KEY_23 }}
+        NO_IP_USERNAME_24: ${{ secrets.NO_IP_USERNAME_24 }}
+        NO_IP_PASSWORD_24: ${{ secrets.NO_IP_PASSWORD_24 }}
+        NO_IP_TOTP_KEY_24: ${{ secrets.NO_IP_TOTP_KEY_24 }}
+        NO_IP_USERNAME_25: ${{ secrets.NO_IP_USERNAME_25 }}
+        NO_IP_PASSWORD_25: ${{ secrets.NO_IP_PASSWORD_25 }}
+        NO_IP_TOTP_KEY_25: ${{ secrets.NO_IP_TOTP_KEY_25 }}
+        NO_IP_USERNAME_26: ${{ secrets.NO_IP_USERNAME_26 }}
+        NO_IP_PASSWORD_26: ${{ secrets.NO_IP_PASSWORD_26 }}
+        NO_IP_TOTP_KEY_26: ${{ secrets.NO_IP_TOTP_KEY_26 }}
+        NO_IP_USERNAME_27: ${{ secrets.NO_IP_USERNAME_27 }}
+        NO_IP_PASSWORD_27: ${{ secrets.NO_IP_PASSWORD_27 }}
+        NO_IP_TOTP_KEY_27: ${{ secrets.NO_IP_TOTP_KEY_27 }}
+        NO_IP_USERNAME_28: ${{ secrets.NO_IP_USERNAME_28 }}
+        NO_IP_PASSWORD_28: ${{ secrets.NO_IP_PASSWORD_28 }}
+        NO_IP_TOTP_KEY_28: ${{ secrets.NO_IP_TOTP_KEY_28 }}
+        NO_IP_USERNAME_29: ${{ secrets.NO_IP_USERNAME_29 }}
+        NO_IP_PASSWORD_29: ${{ secrets.NO_IP_PASSWORD_29 }}
+        NO_IP_TOTP_KEY_29: ${{ secrets.NO_IP_TOTP_KEY_29 }}
+        NO_IP_USERNAME_30: ${{ secrets.NO_IP_USERNAME_30 }}
+        NO_IP_PASSWORD_30: ${{ secrets.NO_IP_PASSWORD_30 }}
+        NO_IP_TOTP_KEY_30: ${{ secrets.NO_IP_TOTP_KEY_30 }}
       run: |
+        set -e # Dừng script ngay lập tức nếu có lệnh nào thất bại
+        echo "Starting NO-IP account processing..."
+        
+        # Lặp qua các tài khoản từ 1 đến 30 (hoặc số lượng tối đa bạn cấu hình trong env)
+        for i in $(seq 1 30); do
+          # Lấy tên biến môi trường một cách động
+          username_var_name="NO_IP_USERNAME_$i"
+          password_var_name="NO_IP_PASSWORD_$i"
+          totp_key_var_name="NO_IP_TOTP_KEY_$i"
 
-        username1="${{ secrets.NO_IP_USERNAME_1 }}"
-        password1="${{ secrets.NO_IP_PASSWORD_1 }}"
-        totp_key1="${{ secrets.NO_IP_TOTP_KEY_1 }}"
-        
-        if [ -n "$username1" ] && [ -n "$password1" ] && [ -n "$totp_key1" ]; then
-          echo "Processing account 1: $username1"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username1" \
-            --env NO_IP_PASSWORD="$password1" \
-            --env NO_IP_TOTP_KEY="$totp_key1" \
-            simaofsilva/noip-renewer:latest
+          # Lấy giá trị của biến môi trường bằng cách sử dụng indirect expansion (Bash)
+          current_username="${!username_var_name}"
+          current_password="${!password_var_name}"
+          current_totp_key="${!totp_key_var_name}"
+
+          # Chỉ xử lý nếu cả ba thông tin đều được cung cấp và không rỗng
+          if [ -n "$current_username" ] && [ -n "$current_password" ] && [ -n "$current_totp_key" ]; then
+            echo "Processing account $i: $current_username"
+            # Lệnh docker run. Nếu nó thất bại, script sẽ dừng lại do 'set -e'
+            docker run --rm \
+              --env NO_IP_USERNAME="$current_username" \
+              --env NO_IP_PASSWORD="$current_password" \
+              --env NO_IP_TOTP_KEY="$current_totp_key" \
+              simaofsilva/noip-renewer:latest
+            echo "Account $i ($current_username) processed successfully."
+          # else
+            # Nếu bạn muốn log các tài khoản bị bỏ qua (do không có secret hoặc secret rỗng), có thể thêm echo ở đây:
+            # if [ -z "$current_username" ] && [ -z "$current_password" ] && [ -z "$current_totp_key" ]; then
+            #   # Hoàn toàn không có secret nào cho account $i
+            # else
+            #   # Một hoặc nhiều secret bị thiếu cho account $i
+            #    echo "Account $i: Credentials not fully set or not provided. Skipping."
+            # fi
+          fi
+        done
+        echo "All configured and non-empty NO-IP accounts processed."
+
+    - name: Create Status Report and Push
+      if: always() # Bước này luôn chạy, kể cả khi bước 'Process NO-IP accounts' thất bại
+      run: |
+        CURRENT_DATETIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC") # Thời gian UTC
+        # Bạn có thể đổi múi giờ nếu muốn, ví dụ:
+        # CURRENT_DATETIME_VN=$(TZ="Asia/Ho_Chi_Minh" date +"%Y-%m-%d %H:%M:%S %Z")
+        STATUS_FILE_NAME="noip_renewer_status.txt" # Tên file cố định, sẽ được ghi đè
+
+        JOB_STATUS="${{ job.status }}" # Lấy trạng thái của job: success, failure, cancelled, skipped
+
+        # Tạo nội dung file status
+        echo "NO-IP Renewer Last Run" > $STATUS_FILE_NAME
+        echo "--------------------------" >> $STATUS_FILE_NAME
+        echo "Timestamp (UTC): $CURRENT_DATETIME" >> $STATUS_FILE_NAME
+        # echo "Timestamp (VN): $CURRENT_DATETIME_VN" >> $STATUS_FILE_NAME # Nếu bạn dùng giờ VN
+        echo "Overall Status: $JOB_STATUS" >> $STATUS_FILE_NAME
+        echo "" >> $STATUS_FILE_NAME
+        echo "Repository: ${{ github.repository }}" >> $STATUS_FILE_NAME
+        echo "Workflow: ${{ github.workflow }}" >> $STATUS_FILE_NAME
+        echo "Run ID: ${{ github.run_id }} (Number: ${{ github.run_number }})" >> $STATUS_FILE_NAME
+        echo "Triggered by: ${{ github.event_name }}" >> $STATUS_FILE_NAME
+        echo "" >> $STATUS_FILE_NAME
+        echo "Full logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $STATUS_FILE_NAME
+
+        # Cấu hình Git
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com" # Hoặc "github-actions[bot]@users.noreply.github.com"
+
+        git add $STATUS_FILE_NAME
+
+        # Chỉ commit và push nếu có thay đổi thực sự trong file status
+        if ! git diff --staged --quiet; then
+          COMMIT_MESSAGE="chore: Update NO-IP renewer status to $JOB_STATUS"
+          COMMIT_DETAILS="Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          git commit -m "$COMMIT_MESSAGE" -m "$COMMIT_DETAILS"
+          
+          # Xác định nhánh để push. GITHUB_REF_NAME là tên nhánh hoặc tag hiện tại.
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "Running on a tag (${{ github.ref_name }}), not pushing status update."
+          else
+            # Push lên nhánh hiện tại mà workflow đang chạy
+            BRANCH_NAME="${{ github.ref_name }}"
+            echo "Pushing status update to branch $BRANCH_NAME"
+            git push origin "$BRANCH_NAME"
+          fi
+        else
+          echo "$STATUS_FILE_NAME content unchanged. No commit needed."
         fi
-        
-        username2="${{ secrets.NO_IP_USERNAME_2 }}"
-        password2="${{ secrets.NO_IP_PASSWORD_2 }}"
-        totp_key2="${{ secrets.NO_IP_TOTP_KEY_2 }}"
-        
-        if [ -n "$username2" ] && [ -n "$password2" ] && [ -n "$totp_key2" ]; then
-          echo "Processing account 2: $username2"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username2" \
-            --env NO_IP_PASSWORD="$password2" \
-            --env NO_IP_TOTP_KEY="$totp_key2" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username3="${{ secrets.NO_IP_USERNAME_3 }}"
-        password3="${{ secrets.NO_IP_PASSWORD_3 }}"
-        totp_key3="${{ secrets.NO_IP_TOTP_KEY_3 }}"
-        
-        if [ -n "$username3" ] && [ -n "$password3" ] && [ -n "$totp_key3" ]; then
-          echo "Processing account 3: $username3"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username3" \
-            --env NO_IP_PASSWORD="$password3" \
-            --env NO_IP_TOTP_KEY="$totp_key3" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username4="${{ secrets.NO_IP_USERNAME_4 }}"
-        password4="${{ secrets.NO_IP_PASSWORD_4 }}"
-        totp_key4="${{ secrets.NO_IP_TOTP_KEY_4 }}"
-        
-        if [ -n "$username4" ] && [ -n "$password4" ] && [ -n "$totp_key4" ]; then
-          echo "Processing account 4: $username4"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username4" \
-            --env NO_IP_PASSWORD="$password4" \
-            --env NO_IP_TOTP_KEY="$totp_key4" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username5="${{ secrets.NO_IP_USERNAME_5 }}"
-        password5="${{ secrets.NO_IP_PASSWORD_5 }}"
-        totp_key5="${{ secrets.NO_IP_TOTP_KEY_5 }}"
-        
-        if [ -n "$username5" ] && [ -n "$password5" ] && [ -n "$totp_key5" ]; then
-          echo "Processing account 5: $username5"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username5" \
-            --env NO_IP_PASSWORD="$password5" \
-            --env NO_IP_TOTP_KEY="$totp_key5" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username6="${{ secrets.NO_IP_USERNAME_6 }}"
-        password6="${{ secrets.NO_IP_PASSWORD_6 }}"
-        totp_key6="${{ secrets.NO_IP_TOTP_KEY_6 }}"
-        
-        if [ -n "$username6" ] && [ -n "$password6" ] && [ -n "$totp_key6" ]; then
-          echo "Processing account 6: $username6"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username6" \
-            --env NO_IP_PASSWORD="$password6" \
-            --env NO_IP_TOTP_KEY="$totp_key6" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username7="${{ secrets.NO_IP_USERNAME_7 }}"
-        password7="${{ secrets.NO_IP_PASSWORD_7 }}"
-        totp_key7="${{ secrets.NO_IP_TOTP_KEY_7 }}"
-        
-        if [ -n "$username7" ] && [ -n "$password7" ] && [ -n "$totp_key7" ]; then
-          echo "Processing account 7: $username7"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username7" \
-            --env NO_IP_PASSWORD="$password7" \
-            --env NO_IP_TOTP_KEY="$totp_key7" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username8="${{ secrets.NO_IP_USERNAME_8 }}"
-        password8="${{ secrets.NO_IP_PASSWORD_8 }}"
-        totp_key8="${{ secrets.NO_IP_TOTP_KEY_8 }}"
-        
-        if [ -n "$username8" ] && [ -n "$password8" ] && [ -n "$totp_key8" ]; then
-          echo "Processing account 8: $username8"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username8" \
-            --env NO_IP_PASSWORD="$password8" \
-            --env NO_IP_TOTP_KEY="$totp_key8" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username9="${{ secrets.NO_IP_USERNAME_9 }}"
-        password9="${{ secrets.NO_IP_PASSWORD_9 }}"
-        totp_key9="${{ secrets.NO_IP_TOTP_KEY_9 }}"
-        
-        if [ -n "$username9" ] && [ -n "$password9" ] && [ -n "$totp_key9" ]; then
-          echo "Processing account 9: $username9"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username9" \
-            --env NO_IP_PASSWORD="$password9" \
-            --env NO_IP_TOTP_KEY="$totp_key9" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username10="${{ secrets.NO_IP_USERNAME_10 }}"
-        password10="${{ secrets.NO_IP_PASSWORD_10 }}"
-        totp_key10="${{ secrets.NO_IP_TOTP_KEY_10 }}"
-        
-        if [ -n "$username10" ] && [ -n "$password10" ] && [ -n "$totp_key10" ]; then
-          echo "Processing account 10: $username10"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username10" \
-            --env NO_IP_PASSWORD="$password10" \
-            --env NO_IP_TOTP_KEY="$totp_key10" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username11="${{ secrets.NO_IP_USERNAME_11 }}"
-        password11="${{ secrets.NO_IP_PASSWORD_11 }}"
-        totp_key11="${{ secrets.NO_IP_TOTP_KEY_11 }}"
-        
-        if [ -n "$username11" ] && [ -n "$password11" ] && [ -n "$totp_key11" ]; then
-          echo "Processing account 11: $username11"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username11" \
-            --env NO_IP_PASSWORD="$password11" \
-            --env NO_IP_TOTP_KEY="$totp_key11" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username12="${{ secrets.NO_IP_USERNAME_12 }}"
-        password12="${{ secrets.NO_IP_PASSWORD_12 }}"
-        totp_key12="${{ secrets.NO_IP_TOTP_KEY_12 }}"
-        
-        if [ -n "$username12" ] && [ -n "$password12" ] && [ -n "$totp_key12" ]; then
-          echo "Processing account 12: $username12"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username12" \
-            --env NO_IP_PASSWORD="$password12" \
-            --env NO_IP_TOTP_KEY="$totp_key12" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username13="${{ secrets.NO_IP_USERNAME_13 }}"
-        password13="${{ secrets.NO_IP_PASSWORD_13 }}"
-        totp_key13="${{ secrets.NO_IP_TOTP_KEY_13 }}"
-        
-        if [ -n "$username13" ] && [ -n "$password13" ] && [ -n "$totp_key13" ]; then
-          echo "Processing account 13: $username13"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username13" \
-            --env NO_IP_PASSWORD="$password13" \
-            --env NO_IP_TOTP_KEY="$totp_key13" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username14="${{ secrets.NO_IP_USERNAME_14 }}"
-        password14="${{ secrets.NO_IP_PASSWORD_14 }}"
-        totp_key14="${{ secrets.NO_IP_TOTP_KEY_14 }}"
-        
-        if [ -n "$username14" ] && [ -n "$password14" ] && [ -n "$totp_key14" ]; then
-          echo "Processing account 14: $username14"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username14" \
-            --env NO_IP_PASSWORD="$password14" \
-            --env NO_IP_TOTP_KEY="$totp_key14" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username15="${{ secrets.NO_IP_USERNAME_15 }}"
-        password15="${{ secrets.NO_IP_PASSWORD_15 }}"
-        totp_key15="${{ secrets.NO_IP_TOTP_KEY_15 }}"
-        
-        if [ -n "$username15" ] && [ -n "$password15" ] && [ -n "$totp_key15" ]; then
-          echo "Processing account 15: $username15"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username15" \
-            --env NO_IP_PASSWORD="$password15" \
-            --env NO_IP_TOTP_KEY="$totp_key15" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username16="${{ secrets.NO_IP_USERNAME_16 }}"
-        password16="${{ secrets.NO_IP_PASSWORD_16 }}"
-        totp_key16="${{ secrets.NO_IP_TOTP_KEY_16 }}"
-        
-        if [ -n "$username16" ] && [ -n "$password16" ] && [ -n "$totp_key16" ]; then
-          echo "Processing account 16: $username16"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username16" \
-            --env NO_IP_PASSWORD="$password16" \
-            --env NO_IP_TOTP_KEY="$totp_key16" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username17="${{ secrets.NO_IP_USERNAME_17 }}"
-        password17="${{ secrets.NO_IP_PASSWORD_17 }}"
-        totp_key17="${{ secrets.NO_IP_TOTP_KEY_17 }}"
-        
-        if [ -n "$username17" ] && [ -n "$password17" ] && [ -n "$totp_key17" ]; then
-          echo "Processing account 17: $username17"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username17" \
-            --env NO_IP_PASSWORD="$password17" \
-            --env NO_IP_TOTP_KEY="$totp_key17" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username18="${{ secrets.NO_IP_USERNAME_18 }}"
-        password18="${{ secrets.NO_IP_PASSWORD_18 }}"
-        totp_key18="${{ secrets.NO_IP_TOTP_KEY_18 }}"
-        
-        if [ -n "$username18" ] && [ -n "$password18" ] && [ -n "$totp_key18" ]; then
-          echo "Processing account 18: $username18"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username18" \
-            --env NO_IP_PASSWORD="$password18" \
-            --env NO_IP_TOTP_KEY="$totp_key18" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username19="${{ secrets.NO_IP_USERNAME_19 }}"
-        password19="${{ secrets.NO_IP_PASSWORD_19 }}"
-        totp_key19="${{ secrets.NO_IP_TOTP_KEY_19 }}"
-        
-        if [ -n "$username19" ] && [ -n "$password19" ] && [ -n "$totp_key19" ]; then
-          echo "Processing account 19: $username19"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username19" \
-            --env NO_IP_PASSWORD="$password19" \
-            --env NO_IP_TOTP_KEY="$totp_key19" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username20="${{ secrets.NO_IP_USERNAME_20 }}"
-        password20="${{ secrets.NO_IP_PASSWORD_20 }}"
-        totp_key20="${{ secrets.NO_IP_TOTP_KEY_20 }}"
-        
-        if [ -n "$username20" ] && [ -n "$password20" ] && [ -n "$totp_key20" ]; then
-          echo "Processing account 20: $username20"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username20" \
-            --env NO_IP_PASSWORD="$password20" \
-            --env NO_IP_TOTP_KEY="$totp_key20" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username21="${{ secrets.NO_IP_USERNAME_21 }}"
-        password21="${{ secrets.NO_IP_PASSWORD_21 }}"
-        totp_key21="${{ secrets.NO_IP_TOTP_KEY_21 }}"
-        
-        if [ -n "$username21" ] && [ -n "$password21" ] && [ -n "$totp_key21" ]; then
-          echo "Processing account 21: $username21"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username21" \
-            --env NO_IP_PASSWORD="$password21" \
-            --env NO_IP_TOTP_KEY="$totp_key21" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username22="${{ secrets.NO_IP_USERNAME_22 }}"
-        password22="${{ secrets.NO_IP_PASSWORD_22 }}"
-        totp_key22="${{ secrets.NO_IP_TOTP_KEY_22 }}"
-        
-        if [ -n "$username22" ] && [ -n "$password22" ] && [ -n "$totp_key22" ]; then
-          echo "Processing account 22: $username22"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username22" \
-            --env NO_IP_PASSWORD="$password22" \
-            --env NO_IP_TOTP_KEY="$totp_key22" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username23="${{ secrets.NO_IP_USERNAME_23 }}"
-        password23="${{ secrets.NO_IP_PASSWORD_23 }}"
-        totp_key23="${{ secrets.NO_IP_TOTP_KEY_23 }}"
-        
-        if [ -n "$username23" ] && [ -n "$password23" ] && [ -n "$totp_key23" ]; then
-          echo "Processing account 23: $username23"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username23" \
-            --env NO_IP_PASSWORD="$password23" \
-            --env NO_IP_TOTP_KEY="$totp_key23" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username24="${{ secrets.NO_IP_USERNAME_24 }}"
-        password24="${{ secrets.NO_IP_PASSWORD_24 }}"
-        totp_key24="${{ secrets.NO_IP_TOTP_KEY_24 }}"
-        
-        if [ -n "$username24" ] && [ -n "$password24" ] && [ -n "$totp_key24" ]; then
-          echo "Processing account 24: $username24"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username24" \
-            --env NO_IP_PASSWORD="$password24" \
-            --env NO_IP_TOTP_KEY="$totp_key24" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username25="${{ secrets.NO_IP_USERNAME_25 }}"
-        password25="${{ secrets.NO_IP_PASSWORD_25 }}"
-        totp_key25="${{ secrets.NO_IP_TOTP_KEY_25 }}"
-        
-        if [ -n "$username25" ] && [ -n "$password25" ] && [ -n "$totp_key25" ]; then
-          echo "Processing account 25: $username25"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username25" \
-            --env NO_IP_PASSWORD="$password25" \
-            --env NO_IP_TOTP_KEY="$totp_key25" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username26="${{ secrets.NO_IP_USERNAME_26 }}"
-        password26="${{ secrets.NO_IP_PASSWORD_26 }}"
-        totp_key26="${{ secrets.NO_IP_TOTP_KEY_26 }}"
-        
-        if [ -n "$username26" ] && [ -n "$password26" ] && [ -n "$totp_key26" ]; then
-          echo "Processing account 26: $username26"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username26" \
-            --env NO_IP_PASSWORD="$password26" \
-            --env NO_IP_TOTP_KEY="$totp_key26" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username27="${{ secrets.NO_IP_USERNAME_27 }}"
-        password27="${{ secrets.NO_IP_PASSWORD_27 }}"
-        totp_key27="${{ secrets.NO_IP_TOTP_KEY_27 }}"
-        
-        if [ -n "$username27" ] && [ -n "$password27" ] && [ -n "$totp_key27" ]; then
-          echo "Processing account 27: $username27"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username27" \
-            --env NO_IP_PASSWORD="$password27" \
-            --env NO_IP_TOTP_KEY="$totp_key27" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username28="${{ secrets.NO_IP_USERNAME_28 }}"
-        password28="${{ secrets.NO_IP_PASSWORD_28 }}"
-        totp_key28="${{ secrets.NO_IP_TOTP_KEY_28 }}"
-        
-        if [ -n "$username28" ] && [ -n "$password28" ] && [ -n "$totp_key28" ]; then
-          echo "Processing account 28: $username28"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username28" \
-            --env NO_IP_PASSWORD="$password28" \
-            --env NO_IP_TOTP_KEY="$totp_key28" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username29="${{ secrets.NO_IP_USERNAME_29 }}"
-        password29="${{ secrets.NO_IP_PASSWORD_29 }}"
-        totp_key29="${{ secrets.NO_IP_TOTP_KEY_29 }}"
-        
-        if [ -n "$username29" ] && [ -n "$password29" ] && [ -n "$totp_key29" ]; then
-          echo "Processing account 29: $username29"
-          docker run --rm \
-            --env NO_IP_USERNAME="$username29" \
-            --env NO_IP_PASSWORD="$password29" \
-            --env NO_IP_TOTP_KEY="$totp_key29" \
-            simaofsilva/noip-renewer:latest
-        fi
-        
-        username30="${{ secrets.NO_IP_USERNAME_30 }}"
-        password30="${{ secrets.NO_IP_PASSWORD_30 }}"
-        totp_key30="${{ secrets.NO_IP_TOTP_KEY_30 }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Token này tự động có sẵn và được cấp quyền bởi 'permissions' ở trên
