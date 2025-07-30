@@ -21,7 +21,7 @@ jobs:
       uses: docker/setup-buildx-action@v3 # Sử dụng phiên bản mới nhất
 
     - name: Docker Pull
-      run: docker pull simaofsilva/noip-renewer:latest
+      run: docker pull ghcr.io/hung319/noip-renewer:latest
 
     - name: Process NO-IP accounts
       id: noip_process
