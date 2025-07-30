@@ -144,7 +144,7 @@ jobs:
               --env NO_IP_USERNAME="$current_username" \
               --env NO_IP_PASSWORD="$current_password" \
               --env NO_IP_TOTP_KEY="$current_totp_key" \
-              simaofsilva/noip-renewer:latest
+              ghcr.io/hung319/noip-renewer:latest
             echo "Account $i ($current_username) processed successfully."
           # else
             # Nếu bạn muốn log các tài khoản bị bỏ qua (do không có secret hoặc secret rỗng), có thể thêm echo ở đây:
