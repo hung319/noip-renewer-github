@@ -21,7 +21,7 @@ jobs:
       uses: docker/setup-buildx-action@v3 # Sử dụng phiên bản mới nhất
 
     - name: Docker Pull
-      run: docker pull ghcr.io/hung319/noip-renewer:latest
+      run: docker pull simaofsilva/noip-renewer:alpine
 
     - name: Process NO-IP accounts
       id: noip_process
@@ -144,7 +144,7 @@ jobs:
               --env NO_IP_USERNAME="$current_username" \
               --env NO_IP_PASSWORD="$current_password" \
               --env NO_IP_TOTP_KEY="$current_totp_key" \
-              ghcr.io/hung319/noip-renewer:latest
+              simaofsilva/noip-renewer:alpine
             echo "Account $i ($current_username) processed successfully."
           # else
             # Nếu bạn muốn log các tài khoản bị bỏ qua (do không có secret hoặc secret rỗng), có thể thêm echo ở đây:
