@@ -1,11 +1,11 @@
 NO-IP Renewer Last Run
 --------------------------
-Timestamp (UTC): 2026-01-11 00:25:04 UTC
-Overall Status: success
+Timestamp (UTC): 2026-01-12 00:28:20 UTC
+Overall Status: failure
 
 Repository: hung319/noip-renewer-github
 Workflow: noip-renewer
-Run ID: 20886654569 (Number: 418)
+Run ID: 20904381653 (Number: 419)
 Triggered by: schedule
 
-Full logs: https://github.com/hung319/noip-renewer-github/actions/runs/20886654569
+Full logs: https://github.com/hung319/noip-renewer-github/actions/runs/20904381653
