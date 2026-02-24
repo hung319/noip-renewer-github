@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  # JOB 1: Tự động tìm TẤT CẢ tài khoản mà không giới hạn số lượng
+  # JOB 1: Chỉ lấy những ID có ĐỦ cả Username và Password
   setup-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -18,27 +18,33 @@ jobs:
     steps:
       - id: set-matrix
         shell: bash
-        env:
-          # Chỉ lấy danh sách TÊN các secret, không lấy GIÁ TRỊ (để tránh lỗi ký tự đặc biệt)
-          SECRETS_KEYS: ${{情绪 toJSON(secrets) }} 
         run: |
-          # 1. Lấy danh sách tên secret -> lọc ra cái có NO_IP_USERNAME_ -> lấy số thứ tự -> sắp xếp
-          # Ví dụ: NO_IP_USERNAME_1, NO_IP_USERNAME_10 -> trả về [1, 10]
-          IDS=$(echo '${{ toJson(secrets) }}' | jq -r 'keys[]' | grep -E '^NO_IP_USERNAME_[0-9]+' | sed 's/NO_IP_USERNAME_//' | sort -n)
+          # Lấy danh sách Keys từ Secrets
+          ALL_KEYS=$(echo '${{ toJson(secrets) }}' | jq -r 'keys[]')
           
-          if [ -z "$IDS" ]; then
+          # 1. Lấy danh sách ID có Username
+          USER_IDS=$(echo "$ALL_KEYS" | grep -E '^NO_IP_USERNAME_[0-9]+' | sed 's/NO_IP_USERNAME_//' | sort -n)
+          
+          # 2. Lấy danh sách ID có Password
+          PASS_IDS=$(echo "$ALL_KEYS" | grep -E '^NO_IP_PASSWORD_[0-9]+' | sed 's/NO_IP_PASSWORD_//' | sort -n)
+          
+          # 3. Tìm giao điểm (chỉ lấy những ID xuất hiện ở cả 2 danh sách)
+          VALID_IDS=$(comm -12 <(echo "$USER_IDS") <(echo "$PASS_IDS"))
+          
+          if [ -z "$VALID_IDS" ]; then
             echo "matrix=[]" >> $GITHUB_OUTPUT
             echo "count=0" >> $GITHUB_OUTPUT
+            echo "Không tìm thấy cặp tài khoản hợp lệ nào."
           else
-            # Biến danh sách số thành mảng JSON: [1, 2, 5, 10...]
-            MATRIX_JSON=$(echo "$IDS" | jq -R . | jq -s -c .)
-            COUNT=$(echo "$IDS" | wc -l)
+            # Biến danh sách ID thành mảng JSON [1, 2, 5...]
+            MATRIX_JSON=$(echo "$VALID_IDS" | jq -R . | jq -s -c .)
+            COUNT=$(echo "$VALID_IDS" | wc -l)
             echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
             echo "count=$COUNT" >> $GITHUB_OUTPUT
-            echo "Tìm thấy $COUNT tài khoản: $IDS"
+            echo "Phát hiện $COUNT tài khoản hợp lệ: $VALID_IDS"
           fi
 
-  # JOB 2: Chạy Matrix (Chỉ chạy những ID tìm thấy)
+  # JOB 2: Chạy Matrix (Chỉ những ID hợp lệ mới được khởi tạo máy ảo)
   noip-renewer:
     needs: setup-matrix
     if: needs.setup-matrix.outputs.count != '0'
@@ -55,12 +61,17 @@ jobs:
           PASS: ${{ secrets[format('NO_IP_PASSWORD_{0}', matrix.index)] }}
           TOTP: ${{ secrets[format('NO_IP_TOTP_KEY_{0}', matrix.index)] }}
         run: |
-          echo "Đang xử lý Acc ${{ matrix.index }}..."
-          docker run --rm \
-            -e NO_IP_USERNAME="$USER" \
-            -e NO_IP_PASSWORD="$PASS" \
-            -e NO_IP_TOTP_KEY="$TOTP" \
-            simaofsilva/noip-renewer:latest
+          echo "🚀 Đang gia hạn cho Acc ${{ matrix.index }}: $USER"
+          
+          # Lệnh Docker chuẩn
+          DOCKER_CMD="docker run --rm -e NO_IP_USERNAME='$USER' -e NO_IP_PASSWORD='$PASS' -e TRANSLATE_ENABLED=false"
+          
+          # Thêm OTP nếu có
+          if [ -n "$TOTP" ]; then
+            DOCKER_CMD="$DOCKER_CMD -e NO_IP_TOTP_KEY='$TOTP'"
+          fi
+          
+          eval "$DOCKER_CMD simaofsilva/noip-renewer:latest"
           
       - name: Create Status File
         if: always()
@@ -79,7 +90,7 @@ jobs:
           path: status_${{ matrix.index }}.txt
           retention-days: 1
 
-  # JOB 3: Tổng hợp báo cáo và dọn dẹp
+  # JOB 3: Tổng hợp báo cáo
   summary:
     needs: noip-renewer
     if: always()
@@ -87,29 +98,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Download all reports
+      - name: Download reports
         uses: actions/download-artifact@v4
         with:
           path: all_statuses
           pattern: status-*
           merge-multiple: true
-      - name: Create Final Report
+      - name: Final Report
         run: |
           DATE=$(TZ="Asia/Ho_Chi_Minh" date +"%d/%m/%Y %H:%M:%S")
           echo "📊 BÁO CÁO GIA HẠN NO-IP" > noip_renewer_status.txt
           echo "Cập nhật lúc: $DATE (Giờ VN)" >> noip_renewer_status.txt
           echo "-----------------------------------" >> noip_renewer_status.txt
           if [ -d "all_statuses" ]; then
-            ls all_statuses/status_*.txt | sort -V | xargs cat >> noip_renewer_status.txt
-          else
-            echo "Không có tài khoản nào." >> noip_renewer_status.txt
+             ls all_statuses/status_*.txt | sort -V | xargs cat >> noip_renewer_status.txt
           fi
       - name: Push Report
         run: |
           git config --global user.name "bot"
           git config --global user.email "bot@github.com"
           git add noip_renewer_status.txt
-          git commit -m "chore: update report [skip ci]" || exit 0
+          git commit -m "update report [skip ci]" || exit 0
           git push origin ${{ github.ref_name }}
       - name: Delete Artifacts
         if: always()
