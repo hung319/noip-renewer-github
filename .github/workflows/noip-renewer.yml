@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  # JOB 1: Tự động đếm số lượng tài khoản thực tế dựa trên Secret
+  # JOB 1: Tự động tìm số lượng tài khoản (Quét 1-30)
   setup-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -17,31 +17,34 @@ jobs:
       count: ${{ steps.set-matrix.outputs.count }}
     steps:
       - id: set-matrix
-        env:
-          # Truyền tất cả secrets vào để đếm (tối đa quét đến 30)
-          SECRETS_JSON: ${{ toJson(secrets) }}
+        shell: bash
         run: |
-          # Dùng regex để tìm các secret có dạng NO_IP_USERNAME_X và lấy số X lớn nhất
-          COUNT=$(echo '$SECRETS_JSON' | jq -r 'keys[]' | grep -E '^NO_IP_USERNAME_[0-9]+' | sed 's/NO_IP_USERNAME_//' | sort -rn | head -n 1)
-          
-          # Nếu không tìm thấy secret nào, mặc định là 0
-          if [ -z "$COUNT" ]; then COUNT=0; fi
-          
-          # Tạo mảng matrix thực tế (ví dụ: [1, 2, 3, 4, 5])
-          if [ "$COUNT" -gt 0 ]; then
-            MATRIX=$(seq 1 $COUNT | jq -R . | jq -s -c .)
-          else
-            MATRIX="[]"
-          fi
-          
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-          echo "count=$COUNT" >> $GITHUB_OUTPUT
-          echo "Phát hiện $COUNT tài khoản cấu hình."
+          COUNT=0
+          # Quét từ 1 đến 30 để tìm số thứ tự lớn nhất có Secret
+          for i in {1..30}; do
+            # Sử dụng biến động từ GitHub Context
+            USER_SECRET='${{ secrets[format('NO_IP_USERNAME_{0}', count)] }}' # Đây là lừa GitHub để lấy context
+            # Cách thực tế: Kiểm tra trực tiếp qua env giả lập của GitHub
+            if [ -n "${{ secrets[format('NO_IP_USERNAME_{0}', i)] }}" ]; then
+              COUNT=$i
+            fi
+          done
 
-  # JOB 2: Chỉ chạy đúng số lượng job đã phát hiện
+          if [ "$COUNT" -eq 0 ]; then
+            echo "matrix=[]" >> $GITHUB_OUTPUT
+            echo "count=0" >> $GITHUB_OUTPUT
+          else
+            # Tạo mảng JSON gọn nhẹ [1,2,3,4,5]
+            MATRIX=$(seq 1 $COUNT | jq -R . | jq -s -c .)
+            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+            echo "count=$COUNT" >> $GITHUB_OUTPUT
+            echo "Tìm thấy $COUNT tài khoản."
+          fi
+
+  # JOB 2: Chạy Matrix dựa trên số lượng đã tìm thấy
   noip-renewer:
     needs: setup-matrix
-    if: needs.setup-matrix.outputs.count > 0
+    if: needs.setup-matrix.outputs.count != '0'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -50,12 +53,21 @@ jobs:
     
     steps:
       - name: Process Account ${{ matrix.index }}
-        id: run_step
+        env:
+          # Lấy thông tin tài khoản đúng theo index của máy ảo này
+          USER: ${{ secrets[format('NO_IP_USERNAME_{0}', matrix.index)] }}
+          PASS: ${{ secrets[format('NO_IP_PASSWORD_{0}', matrix.index)] }}
+          TOTP: ${{ secrets[format('NO_IP_TOTP_KEY_{0}', matrix.index)] }}
         run: |
+          if [ -z "$USER" ]; then
+            echo "Acc ${{ matrix.index }} không có dữ liệu, bỏ qua."
+            exit 0
+          fi
+          
           docker run --rm \
-            --env NO_IP_USERNAME="${{ secrets[format('NO_IP_USERNAME_{0}', matrix.index)] }}" \
-            --env NO_IP_PASSWORD="${{ secrets[format('NO_IP_PASSWORD_{0}', matrix.index)] }}" \
-            --env NO_IP_TOTP_KEY="${{ secrets[format('NO_IP_TOTP_KEY_{0}', matrix.index)] }}" \
+            --env NO_IP_USERNAME="$USER" \
+            --env NO_IP_PASSWORD="$PASS" \
+            --env NO_IP_TOTP_KEY="$TOTP" \
             simaofsilva/noip-renewer:latest
           
       - name: Create Status File
@@ -75,7 +87,7 @@ jobs:
           path: status_${{ matrix.index }}.txt
           retention-days: 1
 
-  # JOB 3: Tổng hợp báo cáo và XÓA Artifact
+  # JOB 3: Tổng hợp báo cáo và dọn dẹp Artifact
   summary:
     needs: noip-renewer
     if: always()
@@ -98,24 +110,22 @@ jobs:
           echo "Cập nhật lúc: $DATE (Giờ VN)" >> noip_renewer_status.txt
           echo "-----------------------------------" >> noip_renewer_status.txt
           
-          if [ -d "all_statuses" ]; then
+          if [ -d "all_statuses" ] && [ "$(ls -A all_statuses)" ]; then
             ls all_statuses/status_*.txt | sort -V | xargs cat >> noip_renewer_status.txt
           else
-            echo "Không có dữ liệu tài khoản." >> noip_renewer_status.txt
+            echo "Không có tài khoản nào được xử lý." >> noip_renewer_status.txt
           fi
-          
-          echo "-----------------------------------" >> noip_renewer_status.txt
-          echo "Chi tiết log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> noip_renewer_status.txt
 
-      - name: Push Report to Repo
+      - name: Push Report
         run: |
-          git config --global user.name "GitHub Action Bot"
-          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Bot"
+          git config --global user.email "bot@github.com"
           git add noip_renewer_status.txt
-          git commit -m "chore: cập nhật báo cáo no-ip [skip ci]" || exit 0
+          git commit -m "chore: update report [skip ci]" || exit 0
           git push origin ${{ github.ref_name }}
 
       - name: Delete Artifacts
+        if: always()
         uses: geekyeggo/delete-artifact@v5
         with:
-            name: status-* # Xóa tất cả các file status tạm sau khi đã gộp xong
+            name: status-*
