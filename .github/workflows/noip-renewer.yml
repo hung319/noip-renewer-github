@@ -1,70 +1,107 @@
-name: noip-renewer-matrix
+name: noip-renewer-smart-matrix
 
 on:
   schedule:
-    - cron: '0 0 * * *' 
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  # JOB 1: Tạo danh sách từ 1 đến 30
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          ACCOUNTS=$(seq 1 30 | jq -R . | jq -s -c .)
+          echo "matrix=$ACCOUNTS" >> $GITHUB_OUTPUT
+
+  # JOB 2: Chạy gia hạn từng tài khoản
   noip-renewer:
+    needs: setup-matrix
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # Quan trọng: 1 account lỗi không làm dừng các account khác
+      fail-fast: false
       matrix:
-        # Liệt kê số thứ tự các tài khoản bạn có ở đây (ví dụ từ 1 đến 5)
-        index: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 
-
+        index: ${{ fromJson(needs.setup-matrix.outputs.matrix) }}
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Process NO-IP Account ${{ matrix.index }}
-        env:
-          # Cách lấy Secret động dựa trên Index của Matrix
-          USER: ${{ secrets[format('NO_IP_USERNAME_{0}', matrix.index)] }}
-          PASS: ${{ secrets[format('NO_IP_PASSWORD_{0}', matrix.index)] }}
-          TOTP: ${{ secrets[format('NO_IP_TOTP_KEY_{0}', matrix.index)] }}
+      - name: Check Secret Presence
+        id: check_secret
         run: |
-          if [ -z "$USER" ]; then
-            echo "Account ${{ matrix.index }} not configured (Secret is empty). Skipping..."
-            exit 0
+          if [ -z "${{ secrets[format('NO_IP_USERNAME_{0}', matrix.index)] }}" ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "exists=true" >> $GITHUB_OUTPUT
           fi
-          
-          echo "Processing account ${{ matrix.index }}: $USER"
-          
-          # Chạy Docker cho từng tài khoản
-          docker run --rm \
-            --env NO_IP_USERNAME="$USER" \
-            --env NO_IP_PASSWORD="$PASS" \
-            --env NO_IP_TOTP_KEY="$TOTP" \
-            simaofsilva/noip-renewer:debian
 
-      - name: Create Status Report
-        if: always()
+      - name: Process Account ${{ matrix.index }}
+        if: steps.check_secret.outputs.exists == 'true'
         run: |
-          echo "Account ${{ matrix.index }} status: ${{ job.status }}" > status_${{ matrix.index }}.txt
+          docker run --rm \
+            --env NO_IP_USERNAME="${{ secrets[format('NO_IP_USERNAME_{0}', matrix.index)] }}" \
+            --env NO_IP_PASSWORD="${{ secrets[format('NO_IP_PASSWORD_{0}', matrix.index)] }}" \
+            --env NO_IP_TOTP_KEY="${{ secrets[format('NO_IP_TOTP_KEY_{0}', matrix.index)] }}" \
+            simaofsilva/noip-renewer:latest
+          
+      - name: Create Status File
+        if: always() && steps.check_secret.outputs.exists == 'true'
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ Acc ${{ matrix.index }}: THÀNH CÔNG" > status_${{ matrix.index }}.txt
+          else
+            echo "❌ Acc ${{ matrix.index }}: THẤT BẠI (Kiểm tra Log)" > status_${{ matrix.index }}.txt
+          fi
 
-  # Job này sẽ tổng hợp kết quả sau khi tất cả các job matrix chạy xong
+      - name: Upload Artifact
+        if: always() && steps.check_secret.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-${{ matrix.index }}
+          path: status_${{ matrix.index }}.txt
+          retention-days: 1
+
+  # JOB 3: Tổng hợp báo cáo
   summary:
     needs: noip-renewer
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update Global Status File
+      - name: Download all reports
+        uses: actions/download-artifact@v4
+        with:
+          path: all_statuses
+          pattern: status-*
+          merge-multiple: true
+
+      - name: Create Final Report
         run: |
-          DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          echo "NO-IP Renewal Summary - $DATE" > noip_renewer_status.txt
+          DATE=$(TZ="Asia/Ho_Chi_Minh" date +"%Y-%m-%d %H:%M:%S")
+          echo "📊 BÁO CÁO GIA HẠN NO-IP" > noip_renewer_status.txt
+          echo "Cập nhật lúc: $DATE (Giờ VN)" >> noip_renewer_status.txt
           echo "-----------------------------------" >> noip_renewer_status.txt
-          echo "Check full logs in GitHub Actions tab." >> noip_renewer_status.txt
           
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
+          if [ -d "all_statuses" ]; then
+            # Sắp xếp theo số thứ tự của Acc
+            ls all_statuses/status_*.txt | sort -V | xargs cat >> noip_renewer_status.txt
+          else
+            echo "Không có tài khoản nào được cấu hình." >> noip_renewer_status.txt
+          fi
+          
+          echo "-----------------------------------" >> noip_renewer_status.txt
+          echo "Chi tiết log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> noip_renewer_status.txt
+
+      - name: Push Report to Repo
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "actions@github.com"
           git add noip_renewer_status.txt
-          git commit -m "chore: update renewal status [skip ci]" || exit 0
+          git commit -m "chore: cập nhật báo cáo no-ip [skip ci]" || exit 0
           git push origin ${{ github.ref_name }}
