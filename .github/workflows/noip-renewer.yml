@@ -1,210 +1,70 @@
-name: noip-renewer
+name: noip-renewer-matrix
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Chạy vào lúc 00:00 UTC (07:00 giờ Việt Nam) mỗi ngày
-  workflow_dispatch:    # Cho phép chạy thủ công
+    - cron: '0 0 * * *' 
+  workflow_dispatch:
 
-# Cấp quyền cho GITHUB_TOKEN để có thể ghi vào repo
 permissions:
   contents: write
 
 jobs:
   noip-renewer:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Quan trọng: 1 account lỗi không làm dừng các account khác
+      matrix:
+        # Liệt kê số thứ tự các tài khoản bạn có ở đây (ví dụ từ 1 đến 5)
+        index: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] 
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4 # Sử dụng phiên bản mới nhất
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3 # Sử dụng phiên bản mới nhất
-
-    - name: Docker Pull
-      run: docker pull simaofsilva/noip-renewer:debian
-
-    - name: Process NO-IP accounts
-      id: noip_process
-      # Khai báo tất cả các secrets cần thiết dưới dạng biến môi trường
-      # Điều này giúp script bên dưới có thể truy cập chúng một cách linh hoạt
-      # Bạn cần liệt kê đủ số lượng tài khoản bạn muốn xử lý (ví dụ: tối đa 30)
-      # Nếu một tài khoản không có secret nào được thiết lập, nó sẽ được bỏ qua.
-      env:
-        NO_IP_USERNAME_1: ${{ secrets.NO_IP_USERNAME_1 }}
-        NO_IP_PASSWORD_1: ${{ secrets.NO_IP_PASSWORD_1 }}
-        NO_IP_TOTP_KEY_1: ${{ secrets.NO_IP_TOTP_KEY_1 }}
-        NO_IP_USERNAME_2: ${{ secrets.NO_IP_USERNAME_2 }}
-        NO_IP_PASSWORD_2: ${{ secrets.NO_IP_PASSWORD_2 }}
-        NO_IP_TOTP_KEY_2: ${{ secrets.NO_IP_TOTP_KEY_2 }}
-        NO_IP_USERNAME_3: ${{ secrets.NO_IP_USERNAME_3 }}
-        NO_IP_PASSWORD_3: ${{ secrets.NO_IP_PASSWORD_3 }}
-        NO_IP_TOTP_KEY_3: ${{ secrets.NO_IP_TOTP_KEY_3 }}
-        NO_IP_USERNAME_4: ${{ secrets.NO_IP_USERNAME_4 }}
-        NO_IP_PASSWORD_4: ${{ secrets.NO_IP_PASSWORD_4 }}
-        NO_IP_TOTP_KEY_4: ${{ secrets.NO_IP_TOTP_KEY_4 }}
-        NO_IP_USERNAME_5: ${{ secrets.NO_IP_USERNAME_5 }}
-        NO_IP_PASSWORD_5: ${{ secrets.NO_IP_PASSWORD_5 }}
-        NO_IP_TOTP_KEY_5: ${{ secrets.NO_IP_TOTP_KEY_5 }}
-        NO_IP_USERNAME_6: ${{ secrets.NO_IP_USERNAME_6 }}
-        NO_IP_PASSWORD_6: ${{ secrets.NO_IP_PASSWORD_6 }}
-        NO_IP_TOTP_KEY_6: ${{ secrets.NO_IP_TOTP_KEY_6 }}
-        NO_IP_USERNAME_7: ${{ secrets.NO_IP_USERNAME_7 }}
-        NO_IP_PASSWORD_7: ${{ secrets.NO_IP_PASSWORD_7 }}
-        NO_IP_TOTP_KEY_7: ${{ secrets.NO_IP_TOTP_KEY_7 }}
-        NO_IP_USERNAME_8: ${{ secrets.NO_IP_USERNAME_8 }}
-        NO_IP_PASSWORD_8: ${{ secrets.NO_IP_PASSWORD_8 }}
-        NO_IP_TOTP_KEY_8: ${{ secrets.NO_IP_TOTP_KEY_8 }}
-        NO_IP_USERNAME_9: ${{ secrets.NO_IP_USERNAME_9 }}
-        NO_IP_PASSWORD_9: ${{ secrets.NO_IP_PASSWORD_9 }}
-        NO_IP_TOTP_KEY_9: ${{ secrets.NO_IP_TOTP_KEY_9 }}
-        NO_IP_USERNAME_10: ${{ secrets.NO_IP_USERNAME_10 }}
-        NO_IP_PASSWORD_10: ${{ secrets.NO_IP_PASSWORD_10 }}
-        NO_IP_TOTP_KEY_10: ${{ secrets.NO_IP_TOTP_KEY_10 }}
-        NO_IP_USERNAME_11: ${{ secrets.NO_IP_USERNAME_11 }}
-        NO_IP_PASSWORD_11: ${{ secrets.NO_IP_PASSWORD_11 }}
-        NO_IP_TOTP_KEY_11: ${{ secrets.NO_IP_TOTP_KEY_11 }}
-        NO_IP_USERNAME_12: ${{ secrets.NO_IP_USERNAME_12 }}
-        NO_IP_PASSWORD_12: ${{ secrets.NO_IP_PASSWORD_12 }}
-        NO_IP_TOTP_KEY_12: ${{ secrets.NO_IP_TOTP_KEY_12 }}
-        NO_IP_USERNAME_13: ${{ secrets.NO_IP_USERNAME_13 }}
-        NO_IP_PASSWORD_13: ${{ secrets.NO_IP_PASSWORD_13 }}
-        NO_IP_TOTP_KEY_13: ${{ secrets.NO_IP_TOTP_KEY_13 }}
-        NO_IP_USERNAME_14: ${{ secrets.NO_IP_USERNAME_14 }}
-        NO_IP_PASSWORD_14: ${{ secrets.NO_IP_PASSWORD_14 }}
-        NO_IP_TOTP_KEY_14: ${{ secrets.NO_IP_TOTP_KEY_14 }}
-        NO_IP_USERNAME_15: ${{ secrets.NO_IP_USERNAME_15 }}
-        NO_IP_PASSWORD_15: ${{ secrets.NO_IP_PASSWORD_15 }}
-        NO_IP_TOTP_KEY_15: ${{ secrets.NO_IP_TOTP_KEY_15 }}
-        NO_IP_USERNAME_16: ${{ secrets.NO_IP_USERNAME_16 }}
-        NO_IP_PASSWORD_16: ${{ secrets.NO_IP_PASSWORD_16 }}
-        NO_IP_TOTP_KEY_16: ${{ secrets.NO_IP_TOTP_KEY_16 }}
-        NO_IP_USERNAME_17: ${{ secrets.NO_IP_USERNAME_17 }}
-        NO_IP_PASSWORD_17: ${{ secrets.NO_IP_PASSWORD_17 }}
-        NO_IP_TOTP_KEY_17: ${{ secrets.NO_IP_TOTP_KEY_17 }}
-        NO_IP_USERNAME_18: ${{ secrets.NO_IP_USERNAME_18 }}
-        NO_IP_PASSWORD_18: ${{ secrets.NO_IP_PASSWORD_18 }}
-        NO_IP_TOTP_KEY_18: ${{ secrets.NO_IP_TOTP_KEY_18 }}
-        NO_IP_USERNAME_19: ${{ secrets.NO_IP_USERNAME_19 }}
-        NO_IP_PASSWORD_19: ${{ secrets.NO_IP_PASSWORD_19 }}
-        NO_IP_TOTP_KEY_19: ${{ secrets.NO_IP_TOTP_KEY_19 }}
-        NO_IP_USERNAME_20: ${{ secrets.NO_IP_USERNAME_20 }}
-        NO_IP_PASSWORD_20: ${{ secrets.NO_IP_PASSWORD_20 }}
-        NO_IP_TOTP_KEY_20: ${{ secrets.NO_IP_TOTP_KEY_20 }}
-        NO_IP_USERNAME_21: ${{ secrets.NO_IP_USERNAME_21 }}
-        NO_IP_PASSWORD_21: ${{ secrets.NO_IP_PASSWORD_21 }}
-        NO_IP_TOTP_KEY_21: ${{ secrets.NO_IP_TOTP_KEY_21 }}
-        NO_IP_USERNAME_22: ${{ secrets.NO_IP_USERNAME_22 }}
-        NO_IP_PASSWORD_22: ${{ secrets.NO_IP_PASSWORD_22 }}
-        NO_IP_TOTP_KEY_22: ${{ secrets.NO_IP_TOTP_KEY_22 }}
-        NO_IP_USERNAME_23: ${{ secrets.NO_IP_USERNAME_23 }}
-        NO_IP_PASSWORD_23: ${{ secrets.NO_IP_PASSWORD_23 }}
-        NO_IP_TOTP_KEY_23: ${{ secrets.NO_IP_TOTP_KEY_23 }}
-        NO_IP_USERNAME_24: ${{ secrets.NO_IP_USERNAME_24 }}
-        NO_IP_PASSWORD_24: ${{ secrets.NO_IP_PASSWORD_24 }}
-        NO_IP_TOTP_KEY_24: ${{ secrets.NO_IP_TOTP_KEY_24 }}
-        NO_IP_USERNAME_25: ${{ secrets.NO_IP_USERNAME_25 }}
-        NO_IP_PASSWORD_25: ${{ secrets.NO_IP_PASSWORD_25 }}
-        NO_IP_TOTP_KEY_25: ${{ secrets.NO_IP_TOTP_KEY_25 }}
-        NO_IP_USERNAME_26: ${{ secrets.NO_IP_USERNAME_26 }}
-        NO_IP_PASSWORD_26: ${{ secrets.NO_IP_PASSWORD_26 }}
-        NO_IP_TOTP_KEY_26: ${{ secrets.NO_IP_TOTP_KEY_26 }}
-        NO_IP_USERNAME_27: ${{ secrets.NO_IP_USERNAME_27 }}
-        NO_IP_PASSWORD_27: ${{ secrets.NO_IP_PASSWORD_27 }}
-        NO_IP_TOTP_KEY_27: ${{ secrets.NO_IP_TOTP_KEY_27 }}
-        NO_IP_USERNAME_28: ${{ secrets.NO_IP_USERNAME_28 }}
-        NO_IP_PASSWORD_28: ${{ secrets.NO_IP_PASSWORD_28 }}
-        NO_IP_TOTP_KEY_28: ${{ secrets.NO_IP_TOTP_KEY_28 }}
-        NO_IP_USERNAME_29: ${{ secrets.NO_IP_USERNAME_29 }}
-        NO_IP_PASSWORD_29: ${{ secrets.NO_IP_PASSWORD_29 }}
-        NO_IP_TOTP_KEY_29: ${{ secrets.NO_IP_TOTP_KEY_29 }}
-        NO_IP_USERNAME_30: ${{ secrets.NO_IP_USERNAME_30 }}
-        NO_IP_PASSWORD_30: ${{ secrets.NO_IP_PASSWORD_30 }}
-        NO_IP_TOTP_KEY_30: ${{ secrets.NO_IP_TOTP_KEY_30 }}
-      run: |
-        set -e # Dừng script ngay lập tức nếu có lệnh nào thất bại
-        echo "Starting NO-IP account processing..."
-        
-        # Lặp qua các tài khoản từ 1 đến 30 (hoặc số lượng tối đa bạn cấu hình trong env)
-        for i in $(seq 1 30); do
-          # Lấy tên biến môi trường một cách động
-          username_var_name="NO_IP_USERNAME_$i"
-          password_var_name="NO_IP_PASSWORD_$i"
-          totp_key_var_name="NO_IP_TOTP_KEY_$i"
-
-          # Lấy giá trị của biến môi trường bằng cách sử dụng indirect expansion (Bash)
-          current_username="${!username_var_name}"
-          current_password="${!password_var_name}"
-          current_totp_key="${!totp_key_var_name}"
-
-          # Chỉ xử lý nếu cả ba thông tin đều được cung cấp và không rỗng
-          if [ -n "$current_username" ] && [ -n "$current_password" ] && [ -n "$current_totp_key" ]; then
-            echo "Processing account $i: $current_username"
-            # Lệnh docker run. Nếu nó thất bại, script sẽ dừng lại do 'set -e'
-            docker run --rm \
-              --env NO_IP_USERNAME="$current_username" \
-              --env NO_IP_PASSWORD="$current_password" \
-              --env NO_IP_TOTP_KEY="$current_totp_key" \
-              simaofsilva/noip-renewer:debian
-            echo "Account $i ($current_username) processed successfully."
-          # else
-            # Nếu bạn muốn log các tài khoản bị bỏ qua (do không có secret hoặc secret rỗng), có thể thêm echo ở đây:
-            # if [ -z "$current_username" ] && [ -z "$current_password" ] && [ -z "$current_totp_key" ]; then
-            #   # Hoàn toàn không có secret nào cho account $i
-            # else
-            #   # Một hoặc nhiều secret bị thiếu cho account $i
-            #    echo "Account $i: Credentials not fully set or not provided. Skipping."
-            # fi
+      - name: Process NO-IP Account ${{ matrix.index }}
+        env:
+          # Cách lấy Secret động dựa trên Index của Matrix
+          USER: ${{ secrets[format('NO_IP_USERNAME_{0}', matrix.index)] }}
+          PASS: ${{ secrets[format('NO_IP_PASSWORD_{0}', matrix.index)] }}
+          TOTP: ${{ secrets[format('NO_IP_TOTP_KEY_{0}', matrix.index)] }}
+        run: |
+          if [ -z "$USER" ]; then
+            echo "Account ${{ matrix.index }} not configured (Secret is empty). Skipping..."
+            exit 0
           fi
-        done
-        echo "All configured and non-empty NO-IP accounts processed."
-
-    - name: Create Status Report and Push
-      if: always() # Bước này luôn chạy, kể cả khi bước 'Process NO-IP accounts' thất bại
-      run: |
-        CURRENT_DATETIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC") # Thời gian UTC
-        # Bạn có thể đổi múi giờ nếu muốn, ví dụ:
-        # CURRENT_DATETIME_VN=$(TZ="Asia/Ho_Chi_Minh" date +"%Y-%m-%d %H:%M:%S %Z")
-        STATUS_FILE_NAME="noip_renewer_status.txt" # Tên file cố định, sẽ được ghi đè
-
-        JOB_STATUS="${{ job.status }}" # Lấy trạng thái của job: success, failure, cancelled, skipped
-
-        # Tạo nội dung file status
-        echo "NO-IP Renewer Last Run" > $STATUS_FILE_NAME
-        echo "--------------------------" >> $STATUS_FILE_NAME
-        echo "Timestamp (UTC): $CURRENT_DATETIME" >> $STATUS_FILE_NAME
-        # echo "Timestamp (VN): $CURRENT_DATETIME_VN" >> $STATUS_FILE_NAME # Nếu bạn dùng giờ VN
-        echo "Overall Status: $JOB_STATUS" >> $STATUS_FILE_NAME
-        echo "" >> $STATUS_FILE_NAME
-        echo "Repository: ${{ github.repository }}" >> $STATUS_FILE_NAME
-        echo "Workflow: ${{ github.workflow }}" >> $STATUS_FILE_NAME
-        echo "Run ID: ${{ github.run_id }} (Number: ${{ github.run_number }})" >> $STATUS_FILE_NAME
-        echo "Triggered by: ${{ github.event_name }}" >> $STATUS_FILE_NAME
-        echo "" >> $STATUS_FILE_NAME
-        echo "Full logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $STATUS_FILE_NAME
-
-        # Cấu hình Git
-        git config --global user.name "GitHub Action"
-        git config --global user.email "action@github.com" # Hoặc "github-actions[bot]@users.noreply.github.com"
-
-        git add $STATUS_FILE_NAME
-
-        # Chỉ commit và push nếu có thay đổi thực sự trong file status
-        if ! git diff --staged --quiet; then
-          COMMIT_MESSAGE="chore: Update NO-IP renewer status to $JOB_STATUS"
-          COMMIT_DETAILS="Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          git commit -m "$COMMIT_MESSAGE" -m "$COMMIT_DETAILS"
           
-          # Xác định nhánh để push. GITHUB_REF_NAME là tên nhánh hoặc tag hiện tại.
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "Running on a tag (${{ github.ref_name }}), not pushing status update."
-          else
-            # Push lên nhánh hiện tại mà workflow đang chạy
-            BRANCH_NAME="${{ github.ref_name }}"
-            echo "Pushing status update to branch $BRANCH_NAME"
-            git push origin "$BRANCH_NAME"
-          fi
-        else
-          echo "$STATUS_FILE_NAME content unchanged. No commit needed."
-        fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Token này tự động có sẵn và được cấp quyền bởi 'permissions' ở trên
+          echo "Processing account ${{ matrix.index }}: $USER"
+          
+          # Chạy Docker cho từng tài khoản
+          docker run --rm \
+            --env NO_IP_USERNAME="$USER" \
+            --env NO_IP_PASSWORD="$PASS" \
+            --env NO_IP_TOTP_KEY="$TOTP" \
+            simaofsilva/noip-renewer:debian
+
+      - name: Create Status Report
+        if: always()
+        run: |
+          echo "Account ${{ matrix.index }} status: ${{ job.status }}" > status_${{ matrix.index }}.txt
+
+  # Job này sẽ tổng hợp kết quả sau khi tất cả các job matrix chạy xong
+  summary:
+    needs: noip-renewer
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update Global Status File
+        run: |
+          DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          echo "NO-IP Renewal Summary - $DATE" > noip_renewer_status.txt
+          echo "-----------------------------------" >> noip_renewer_status.txt
+          echo "Check full logs in GitHub Actions tab." >> noip_renewer_status.txt
+          
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add noip_renewer_status.txt
+          git commit -m "chore: update renewal status [skip ci]" || exit 0
+          git push origin ${{ github.ref_name }}
