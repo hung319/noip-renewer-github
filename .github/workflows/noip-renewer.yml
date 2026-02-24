@@ -9,20 +9,39 @@ permissions:
   contents: write
 
 jobs:
-  # JOB 1: Tạo danh sách từ 1 đến 30
+  # JOB 1: Tự động đếm số lượng tài khoản thực tế dựa trên Secret
   setup-matrix:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      count: ${{ steps.set-matrix.outputs.count }}
     steps:
       - id: set-matrix
+        env:
+          # Truyền tất cả secrets vào để đếm (tối đa quét đến 30)
+          SECRETS_JSON: ${{ toJson(secrets) }}
         run: |
-          ACCOUNTS=$(seq 1 30 | jq -R . | jq -s -c .)
-          echo "matrix=$ACCOUNTS" >> $GITHUB_OUTPUT
+          # Dùng regex để tìm các secret có dạng NO_IP_USERNAME_X và lấy số X lớn nhất
+          COUNT=$(echo '$SECRETS_JSON' | jq -r 'keys[]' | grep -E '^NO_IP_USERNAME_[0-9]+' | sed 's/NO_IP_USERNAME_//' | sort -rn | head -n 1)
+          
+          # Nếu không tìm thấy secret nào, mặc định là 0
+          if [ -z "$COUNT" ]; then COUNT=0; fi
+          
+          # Tạo mảng matrix thực tế (ví dụ: [1, 2, 3, 4, 5])
+          if [ "$COUNT" -gt 0 ]; then
+            MATRIX=$(seq 1 $COUNT | jq -R . | jq -s -c .)
+          else
+            MATRIX="[]"
+          fi
+          
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          echo "Phát hiện $COUNT tài khoản cấu hình."
 
-  # JOB 2: Chạy gia hạn từng tài khoản
+  # JOB 2: Chỉ chạy đúng số lượng job đã phát hiện
   noip-renewer:
     needs: setup-matrix
+    if: needs.setup-matrix.outputs.count > 0
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -30,17 +49,8 @@ jobs:
         index: ${{ fromJson(needs.setup-matrix.outputs.matrix) }}
     
     steps:
-      - name: Check Secret Presence
-        id: check_secret
-        run: |
-          if [ -z "${{ secrets[format('NO_IP_USERNAME_{0}', matrix.index)] }}" ]; then
-            echo "exists=false" >> $GITHUB_OUTPUT
-          else
-            echo "exists=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Process Account ${{ matrix.index }}
-        if: steps.check_secret.outputs.exists == 'true'
+        id: run_step
         run: |
           docker run --rm \
             --env NO_IP_USERNAME="${{ secrets[format('NO_IP_USERNAME_{0}', matrix.index)] }}" \
@@ -49,7 +59,7 @@ jobs:
             simaofsilva/noip-renewer:latest
           
       - name: Create Status File
-        if: always() && steps.check_secret.outputs.exists == 'true'
+        if: always()
         run: |
           if [[ "${{ job.status }}" == "success" ]]; then
             echo "✅ Acc ${{ matrix.index }}: THÀNH CÔNG" > status_${{ matrix.index }}.txt
@@ -58,14 +68,14 @@ jobs:
           fi
 
       - name: Upload Artifact
-        if: always() && steps.check_secret.outputs.exists == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: status-${{ matrix.index }}
           path: status_${{ matrix.index }}.txt
           retention-days: 1
 
-  # JOB 3: Tổng hợp báo cáo
+  # JOB 3: Tổng hợp báo cáo và XÓA Artifact
   summary:
     needs: noip-renewer
     if: always()
@@ -89,10 +99,9 @@ jobs:
           echo "-----------------------------------" >> noip_renewer_status.txt
           
           if [ -d "all_statuses" ]; then
-            # Sắp xếp theo số thứ tự của Acc
             ls all_statuses/status_*.txt | sort -V | xargs cat >> noip_renewer_status.txt
           else
-            echo "Không có tài khoản nào được cấu hình." >> noip_renewer_status.txt
+            echo "Không có dữ liệu tài khoản." >> noip_renewer_status.txt
           fi
           
           echo "-----------------------------------" >> noip_renewer_status.txt
@@ -105,3 +114,8 @@ jobs:
           git add noip_renewer_status.txt
           git commit -m "chore: cập nhật báo cáo no-ip [skip ci]" || exit 0
           git push origin ${{ github.ref_name }}
+
+      - name: Delete Artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+            name: status-* # Xóa tất cả các file status tạm sau khi đã gộp xong
