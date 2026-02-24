@@ -1,6 +1,8 @@
 📊 BÁO CÁO GIA HẠN NO-IP
-Cập nhật lúc: 2026-02-24 08:42:45 (Giờ VN)
+Cập nhật lúc: 24/02/2026 09:12:02 (Giờ VN)
 -----------------------------------
-Không có dữ liệu tài khoản.
------------------------------------
-Chi tiết log: https://github.com/hung319/noip-renewer-github/actions/runs/22332962981
+✅ Acc 1: THÀNH CÔNG
+✅ Acc 2: THÀNH CÔNG
+✅ Acc 3: THÀNH CÔNG
+✅ Acc 4: THÀNH CÔNG
+❌ Acc 5: THẤT BẠI
